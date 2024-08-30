@@ -12,27 +12,27 @@
         padding: 20px;
         color: #333;
     }
-   
+    
     h2 {
         color: #007bff;
         text-align: center;
     }
-   
+    
     .container {
-        max-width: 800px;
+        max-width: 1000px;
         margin: 0 auto;
         padding: 20px;
         background: #fff;
         border-radius: 8px;
         box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-   
+    
     label {
         display: block;
         margin-bottom: 5px;
         font-weight: bold;
     }
-   
+    
     select, input[type="number"], input[type="text"] {
         width: calc(100% - 22px);
         padding: 10px;
@@ -41,7 +41,7 @@
         border-radius: 4px;
         box-sizing: border-box;
     }
-   
+    
     .course-entry {
         margin-bottom: 15px;
         padding: 15px;
@@ -49,7 +49,7 @@
         border-radius: 4px;
         background: #f9f9f9;
     }
-   
+    
     button {
         background-color: #007bff;
         color: #fff;
@@ -60,81 +60,114 @@
         font-size: 16px;
         margin-right: 10px;
     }
-   
+    
     button:hover {
         background-color: #0056b3;
     }
-   
+    
     #requestQuote {
         display: none;
     }
-   
+    
     #totalPrice {
         font-size: 18px;
         font-weight: bold;
         color: #28a745;
         text-align: center;
     }
-   
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    
+    table, th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+    
+    th {
+        background-color: #f2f2f2;
+        text-align: left;
+    }
+    
+    td {
+        text-align: right;
+    }
+    
+    td:first-child, th:first-child {
+        text-align: left;
+    }
+
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+
     .course-entry button {
         background-color: #dc3545;
     }
-   
-    .course-entry button:hover {
-        background-color: #c82333;
-    }
+
 </style>
 </head>
 <body>
 
- 
 <div class="container">
-    <img src="PRICING FRAMEWORK.png" alt="Price Diagram">
+
+    <img src="Test.png">
+
     <h2>Course Price Calculator</h2>
- 
+
     <div id="courseEntries">
         <!-- Starting with no pre-filled course entries -->
     </div>
- 
-    <button type="button" onclick="addCourseEntry()">Add More Courses</button><br><br>
- 
+
+    <button type="button" onclick="addCourseEntry()">Add More Items</button><br><br>
+
+    <button onclick="calculatePrice()">Calculate Total</button>
+
+    <div id="priceBreakdown"></div>
+    <p id="totalPrice"></p>
+
     <label for="companyName">Company Name:</label>
     <input type="text" id="companyName" required><br><br>
- 
+
     <label for="requestedBy">Requested by (Your Name):</label>
     <input type="text" id="requestedBy" required><br><br>
- 
-    <button onclick="calculatePrice()">Calculate Price</button>
- 
-    <p id="totalPrice"></p>
- 
+    
     <button id="requestQuote" onclick="requestQuote()">Request Formal Quote</button>
 </div>
- 
+
 <script>
     const courses = {
-        "Youth Development Programme": 28000,
-        "Graduate Development Programme": 33000,
-        "All other Internship Programmes": 38000,
-        "Individual Mentoring (Online 1 Hour per month)": 12000,
-        "Group Mentoring (Online Group Rate)": 45000,
-        "Individual Mentoring (Face to Face - 1 Hour per month)": 17500,
+        "Youth Development Programme (Incl Mentoring - Online)": 40000,
+        "Graduate Development Programme (Incl Mentoring - Online)": 45000,
+        "All other Internship Programmes (Incl Mentoring - Online)": 50000,
         "Single Course (One user Per Course)": 1250,
         "5 Courses (Min 100 licenses)": 1500,
         "10 Courses (Min 100 licenses)": 1900,
         "15 Courses (Min 100 licenses)": 2400,
         "20 Courses (Min 100 licenses)": 2500,
         "CK Connect (Min 100 licenses)": 1250,
-        "Payroll Admin Fees": 3400
+        "Payroll Admin Fees (Based on R72,000 Annual Stipend)": 3400
     };
- 
+
+    const min100Courses = [
+        "5 Courses (Min 100 licenses)", 
+        "10 Courses (Min 100 licenses)", 
+        "15 Courses (Min 100 licenses)", 
+        "20 Courses (Min 100 licenses)", 
+        "CK Connect (Min 100 licenses)"
+    ];
+
     function addCourseEntry() {
         const courseEntryContainer = document.getElementById('courseEntries');
         const entryDiv = document.createElement('div');
         entryDiv.className = 'course-entry';
         entryDiv.innerHTML = `
-            <label for="course">Select Course:</label>
-            <select class="course" required>
+            <label for="course">Select Item:</label>
+            <select class="course" required onchange="updateQuantityMin(this)">
                 ${Object.keys(courses).map(course => `<option value="${course}">${course}</option>`).join('')}
             </select>
             <label for="quantity">Enter Quantity:</label>
@@ -143,20 +176,41 @@
         `;
         courseEntryContainer.appendChild(entryDiv);
     }
- 
+
+    function updateQuantityMin(selectElement) {
+        const selectedCourse = selectElement.value;
+        const quantityInput = selectElement.parentElement.querySelector('.quantity');
+        if (min100Courses.includes(selectedCourse)) {
+            quantityInput.min = 100;
+            quantityInput.value = 100; // Default value set to 100 for these courses
+        } else {
+            quantityInput.min = 1;
+            quantityInput.value = 1; // Default to 1 for all other courses
+        }
+    }
+
     function removeCourseEntry(button) {
         button.parentElement.remove();
         calculatePrice(); // Recalculate the total price when an entry is removed
     }
- 
+
     function formatNumber(number) {
         return number.toLocaleString('en-ZA'); // Format number with thousand separators
     }
- 
+
     function calculatePrice() {
         const courseEntries = document.querySelectorAll('.course-entry');
         let totalPrice = 0;
-       
+        let tableContent = `
+            <table>
+                <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Unit Price (R)</th>
+                    <th>Total (R)</th>
+                </tr>
+        `;
+
         courseEntries.forEach(entry => {
             const courseSelect = entry.querySelector('.course');
             const selectedCourse = courseSelect.value;
@@ -164,65 +218,58 @@
             const quantity = parseInt(quantityInput.value, 10); // Parse quantity as an integer
             const coursePrice = courses[selectedCourse];
             if (!isNaN(quantity) && coursePrice) {
-                totalPrice += coursePrice * quantity;
+                const courseTotal = coursePrice * quantity;
+                totalPrice += courseTotal;
+                tableContent += `
+                    <tr>
+                        <td>${selectedCourse}</td>
+                        <td>${quantity}</td>
+                        <td>${formatNumber(coursePrice)}</td>
+                        <td>${formatNumber(courseTotal)}</td>
+                    </tr>
+                `;
             }
         });
- 
-        document.getElementById('totalPrice').innerText = `Total Price: R${formatNumber(totalPrice)}`;
+
+        tableContent += `
+            <tr>
+                <td colspan="3"><strong>Total (ex VAT)</strong></td>
+                <td><strong>R${formatNumber(totalPrice)}</strong></td>
+            </tr>
+            </table>
+        `;
+
+        document.getElementById('priceBreakdown').innerHTML = tableContent;
         document.getElementById('requestQuote').style.display = 'block';
     }
- 
+
     function requestQuote() {
         const courseEntries = document.querySelectorAll('.course-entry');
         const companyName = document.getElementById('companyName').value;
         const requestedBy = document.getElementById('requestedBy').value;
-       
-        const deals = Array.from(courseEntries).map(entry => {
+        let emailBody = `Company Name: ${companyName}\nRequested by: ${requestedBy}\n\nSelected Items:\n`;
+
+        let totalPrice = 0;
+
+        courseEntries.forEach(entry => {
             const courseSelect = entry.querySelector('.course');
             const selectedCourse = courseSelect.value;
             const quantityInput = entry.querySelector('.quantity');
             const quantity = parseInt(quantityInput.value, 10);
             const coursePrice = courses[selectedCourse];
-            const totalPrice = coursePrice * quantity;
-           
-            return {
-                title: `${selectedCourse}: ${quantity} x R${coursePrice}`,
-                value: totalPrice,
-                currency: 'ZAR',
-                status: 'open',
-                org_id: companyName,
-                person_id: requestedBy,
-            };
+            const courseTotal = coursePrice * quantity;
+            totalPrice += courseTotal;
+
+            emailBody += `${selectedCourse}: ${quantity} x R${formatNumber(coursePrice)} = R${formatNumber(courseTotal)}\n`;
         });
-       
-        const apiKey = 'YOUR_PIPEDRIVE_API_KEY'; // Replace with your actual Pipedrive API key
-        const url = `https://api.pipedrive.com/v1/deals?api_token=${apiKey}`;
- 
-        const requests = deals.map(dealData =>
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(dealData),
-            })
-        );
- 
-        Promise.all(requests)
-            .then(responses => Promise.all(responses.map(response => response.json())))
-            .then(data => {
-                if (data.every(item => item.success)) {
-                    alert('Deals created successfully in Pipedrive!');
-                } else {
-                    alert('Failed to create some deals.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while creating the deals.');
-            });
+
+        emailBody += `\nTotal Price: R${formatNumber(totalPrice)}\n\n Add Additional notes (Example EAP Targets)`;
+
+        const subject = `Formal Quote Request from ${requestedBy} on behalf of ${companyName}`;
+        const mailtoLink = `mailto:hano@estudysa.co.za?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+        window.location.href = mailtoLink;
     }
 </script>
- 
+
 </body>
 </html>
