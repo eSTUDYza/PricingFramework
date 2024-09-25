@@ -181,9 +181,10 @@
 
 <script>
     const courses = {
-        "Youth Development Programme": 28000,
-        "Graduate Development Programme": 33000,
-        "All other Internship Programmes": 38000,
+        "Select Item":0,
+        "Youth Development Programme": 22000,
+        "Graduate Development Programme": 27000,
+        "All other Internship Programmes": 32000,
         "Individual Mentoring (Online 1 Hour per month)": 12000,
         "Single Course (One user Per Course)": 1250,
         "5 Courses (Min 100 licenses)": 1500,
@@ -191,7 +192,10 @@
         "15 Courses (Min 100 licenses)": 2400,
         "20 Courses (Min 100 licenses)": 2500,
         "CK Connect (Min 100 licenses)": 1250,
-        "Payroll Admin Fees (Based on R72,000 Annual Stipend)": 3400
+        "Recruitment per Individual": 6000,
+        "Stipend per month": 0,
+        "Payroll Admin Fees": 0
+        // Default set to 0, user will adjust this
     };
 
     const mentoringRelatedCourses = [
@@ -242,6 +246,11 @@
         const unitPriceCell = selectElement.parentElement.parentElement.querySelector('.unit-price');
         const quantityInput = selectElement.parentElement.parentElement.querySelector('.quantity');
 
+        if (selectedCourse === "Stipend per month") {
+            const userPrice = prompt("Please enter the price for Stiped");
+            courses[selectedCourse] = parseFloat(userPrice) || 0;
+        }
+
         unitPriceCell.textContent = formatNumber(courses[selectedCourse]);
 
         // Automatically set the quantity to 100 if the selected course requires a minimum of 100 licenses
@@ -262,13 +271,30 @@
     function calculatePrice() {
         const rows = document.querySelectorAll('#courseTable tbody tr');
         let totalPrice = 0;
+        let stipendTotal =  0;// Remove commas for calculation
 
         rows.forEach(row => {
             const quantity = parseFloat(row.querySelector('.quantity').value);
-            const unitPrice = parseFloat(row.querySelector('.unit-price').textContent.replace(/,/g, '')); // Remove commas for calculation
+            let unitPrice = parseFloat(row.querySelector('.unit-price').textContent.replace(/,/g, ''));
+            
+
+            const course = row.querySelector('.course').value;
+                    // If "Stipend per month" is selected, multiply unit price by 12 (for 12 months)
+            if (course == "Stipend per month") {
+                unitPrice = unitPrice * 12; // Multiply the monthly stipend by 12 to get yearly cost
+                stipendTotal += unitPrice * quantity; // Add to the stipend total
+            }// Add to the stipend total
+
+            if (course === "Payroll Admin Fees") {
+                unitPrice = stipendTotal * 0.04; 
+                row.querySelector('.unit-price').textContent = formatNumber(unitPrice);// 4% of the total stipend
+            }
+
             const total = quantity * unitPrice;
             row.querySelector('.total-price').textContent = formatNumber(total);
             totalPrice += total;
+
+            
         });
 
         document.getElementById('overallTotal').textContent = `R${formatNumber(totalPrice)}`;
@@ -285,38 +311,55 @@
         }
         return true; // Allow further action
     }
-
     function requestQuote() {
-        const rows = document.querySelectorAll('#courseTable tbody tr');
-        const companyName = document.getElementById('companyName').value;
-        const requestedBy = document.getElementById('requestedBy').value;
-        let emailBody = `Company Name: ${companyName}\nRequested by: ${requestedBy}\n\nSelected Items:\n`;
+    const rows = document.querySelectorAll('#courseTable tbody tr');
+    const companyName = document.getElementById('companyName').value;
+    const requestedBy = document.getElementById('requestedBy').value;
+    let emailBody = `Company Name: ${companyName}\nRequested by: ${requestedBy}\n\nSelected Items:\n`;
 
-        let totalPrice = 0;
-        let selectedCourses = [];
+    let totalPrice = 0;
+    let stipendTotal = 0; // Define stipendTotal here
+    let selectedCourses = [];
 
-        rows.forEach(row => {
-            const courseSelect = row.querySelector('.course').value;
-            const quantity = parseFloat(row.querySelector('.quantity').value);
-            const unitPrice = parseFloat(row.querySelector('.unit-price').textContent.replace(/,/g, '')); // Remove commas for calculation
-            const total = quantity * unitPrice;
-            totalPrice += total;
+    rows.forEach(row => {
+        const quantity = parseFloat(row.querySelector('.quantity').value);
+        let unitPrice = parseFloat(row.querySelector('.unit-price').textContent.replace(/,/g, ''));
+        
+        const course = row.querySelector('.course').value;
 
-            selectedCourses.push(courseSelect); // Collect selected courses for mentoring check
-
-            emailBody += `${courseSelect}: ${quantity} x R${formatNumber(unitPrice)} = R${formatNumber(total)}\n`;
-        });
-
-        if (!checkMentoringSelection(selectedCourses)) {
-            return; // Exit the function if the check fails
+        // If "Stipend per month" is selected, multiply unit price by 12 (for 12 months)
+        if (course === "Stipend per month") {
+            unitPrice *= 12; // Multiply the monthly stipend by 12 to get yearly cost
+            stipendTotal += unitPrice * quantity; // Update stipendTotal
         }
 
-        emailBody += `\nTotal Price: R${formatNumber(totalPrice)}\n\nAdd Additional notes (Example EAP Targets)`;
+        // If "Payroll Admin Fees" is selected, calculate as 4% of the stipend total
+        if (course === "Payroll Admin Fees") {
+            unitPrice = stipendTotal * 0.04; 
+            row.querySelector('.unit-price').textContent = formatNumber(unitPrice); // Update unit price display
+        }
 
-        const subject = `Formal Quote Request from ${requestedBy} on behalf of ${companyName}`;
-        const mailtoLink = `mailto:hano@estudysa.co.za?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
-        window.location.href = mailtoLink;
+        const total = quantity * unitPrice;
+        row.querySelector('.total-price').textContent = formatNumber(total);
+        totalPrice += total;
+
+        selectedCourses.push(course); // Collect selected courses
+
+        emailBody += `${course}: ${quantity} x R${formatNumber(unitPrice)} = R${formatNumber(total)}\n`;
+    });
+
+    if (!checkMentoringSelection(selectedCourses)) {
+        return; // Exit the function if the check fails
     }
+
+    emailBody += `\nTotal Price: R${formatNumber(totalPrice)}\n\nAdd Additional notes (Example EAP Targets)`;
+
+    const subject = `Formal Quote Request from ${requestedBy} on behalf of ${companyName}`;
+    const mailtoLink = `mailto:hano@estudysa.co.za?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+    window.location.href = mailtoLink;
+}
+
+
 
     function addMentoring() {
         document.getElementById('alert').style.display = 'none';
